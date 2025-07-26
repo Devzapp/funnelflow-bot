@@ -9,6 +9,11 @@ import CTASection from "@/components/CTASection";
 const Index = () => {
   return (
     <div className="min-h-screen">
+            <img
+        src="https://pages.greatpages.com.br/www.devzapp.com.br/top/686783_1_171988986966836fce08dff144878762.svg"
+        alt="Logo Devzapp"
+        className="fixed top-2 left-2 w-16 h-auto z-50"
+      />
       <HeroSection />
       <BenefitsSection />
       <HowItWorksSection />
