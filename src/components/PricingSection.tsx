@@ -46,7 +46,7 @@ const PricingSection = () => {
         </div>
 
         <p className="text-lg opacity-90">
-          <strong>ROI garantido</strong> com vendas recuperadas • <strong>Vagas limitadas</strong> nesse lançamento
+          <strong>ROI escalável</strong> com vendas recuperadas • <strong>Vagas limitadas</strong> nesse lançamento
         </p>
       </div>
     </section>

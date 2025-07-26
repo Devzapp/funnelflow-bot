@@ -11,7 +11,7 @@ const CTASection = () => {
             Garante já sua automação eficiente
           </h2>
           <p className="text-xl mb-8 opacity-90">
-            Plano semestral a partir de R$ 1.500 — ROI garantido com vendas recuperadas
+            Plano semestral a partir de R$ 1.500 — ROI escalável com vendas recuperadas
           </p>
           
           <div className="flex items-center justify-center gap-2 mb-8 text-lg">
