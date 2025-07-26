@@ -4,16 +4,14 @@ const BenefitsSection = () => {
   const benefits = [
     "1 número conectado para gestão de grupos",
     "1 número para mensagens individuais",
-    "Gestão de comunidades ilimitadas",
-    "Grupos ilimitados",
-    "Mensagens ilimitadas",
-    "Agendamentos ilimitados, incluindo recorrentes",
+    "Gestão de comunidades, grupos e mensagens ilimitadas",
+    "Agendamentos ilimitados, incluindo recorrentes e multimídia",
     "Envio de vídeos, arquivos, áudios, links, enquetes",
-    "1 link de redirecionamento",
-    "Visão geral de todos os grupos em dashboard",
-    "Avisos de inatividade e desconexão de número",
-    "Webhook com fluxo automatizado de mensagens",
-    "Videochamada gratuita para implementação (onboarding)",
+    "Link de redirecionamento personalizado",
+    "Visão geral de grupos por dashboard",
+    "Avisos automáticos de inatividade e desconexão",
+    "Webhook com fluxo automático de mensagens",
+    "Videochamada gratuita de implementação (onboarding)",
     "Suporte no horário comercial e treinamento gravado"
   ];
 

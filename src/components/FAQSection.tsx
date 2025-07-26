@@ -47,8 +47,8 @@ const FAQSection = () => {
                   Existem limites no plano?
                 </h3>
                 <p className="text-muted-foreground">
-                  Smart: até 40 grupos por número com mensagens ilimitadas. 
-                  Outros planos oferecem escala ilimitada para grandes operações.
+                  Plano Smart: até 40 grupos por número, mensagens ilimitadas. 
+                  Diamond e Black escalam ilimitado para grandes operações.
                 </p>
               </div>
             </div>
