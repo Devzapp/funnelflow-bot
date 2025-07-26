@@ -52,6 +52,11 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				whatsapp: {
+					green: 'hsl(var(--whatsapp-green))',
+					dark: 'hsl(var(--whatsapp-dark))',
+					light: 'hsl(var(--whatsapp-light))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -67,6 +72,14 @@ export default {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
+			},
+			backgroundImage: {
+				'gradient-primary': 'var(--gradient-primary)',
+				'gradient-hero': 'var(--gradient-hero)'
+			},
+			boxShadow: {
+				'whatsapp': 'var(--shadow-whatsapp)',
+				'card-soft': 'var(--shadow-card)'
 			},
 			keyframes: {
 				'accordion-down': {
@@ -84,11 +97,20 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse-whatsapp': {
+					'0%, 100%': {
+						boxShadow: '0 0 0 0 hsl(142, 70%, 49%, 0.7)'
+					},
+					'70%': {
+						boxShadow: '0 0 0 10px hsl(142, 70%, 49%, 0)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-whatsapp': 'pulse-whatsapp 2s infinite'
 			}
 		}
 	},
