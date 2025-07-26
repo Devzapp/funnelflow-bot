@@ -31,7 +31,7 @@ const CTASection = () => {
                 <span className="text-sm">6× R$ 277/mês ou R$ 1.500 à vista</span>
               </a>
             </Button>
-            <Button variant="whatsappOutline" size="xl" className="border-white text-white hover:bg-white hover:text-primary">
+            <Button variant="default" size="xl" className="border-white text-white hover:bg-white hover:text-primary">
               Demonstração personalizada
             </Button>
           </div>
