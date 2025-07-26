@@ -15,9 +15,16 @@ const HeroSection = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-          <Button variant="whatsapp" size="xl" className="text-lg h-16 px-8 flex flex-col items-center justify-center">
-            <span>Quero ser Smart + Funil</span>
-            <span className="text-sm">6× R$ 277/mês ou R$ 1.500 à vista</span>
+          <Button 
+            variant="whatsapp" 
+            size="xl" 
+            className="text-lg h-16 px-8 flex flex-col items-center justify-center"
+            asChild
+          >
+            <a href="https://checkout.devzapp.com.br/subscribe/smart-webhook-promo" target="_blank" rel="noopener noreferrer">
+              <span>Quero ser Smart + Funil</span>
+              <span className="text-sm">6× R$ 277/mês ou R$ 1.500 à vista</span>
+            </a>
           </Button>
           <Button variant="whatsappOutline" size="xl" className="text-lg">
             Demonstração personalizada

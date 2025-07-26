@@ -20,9 +20,16 @@ const CTASection = () => {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button variant="default" size="xl" className="bg-white text-primary hover:bg-white/90 text-lg font-bold h-16 flex flex-col items-center justify-center">
-              <span>Quero ser Smart + Funil</span>
-              <span className="text-sm">6× R$ 277/mês ou R$ 1.500 à vista</span>
+            <Button 
+              variant="default" 
+              size="xl" 
+              className="bg-white text-primary hover:bg-white/90 text-lg font-bold h-16 flex flex-col items-center justify-center"
+              asChild
+            >
+              <a href="https://checkout.devzapp.com.br/subscribe/smart-webhook-promo" target="_blank" rel="noopener noreferrer">
+                <span>Quero ser Smart + Funil</span>
+                <span className="text-sm">6× R$ 277/mês ou R$ 1.500 à vista</span>
+              </a>
             </Button>
             <Button variant="whatsappOutline" size="xl" className="border-white text-white hover:bg-white hover:text-primary">
               Demonstração personalizada
