@@ -23,7 +23,7 @@ const Index = () => {
       <PricingSection />
       <FAQSection />
       <CTASection />
-      <Footer
+      <Footer/>
     </div>
   );
 };
