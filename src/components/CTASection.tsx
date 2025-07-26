@@ -20,8 +20,9 @@ const CTASection = () => {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button variant="default" size="xl" className="bg-white text-primary hover:bg-white/90 text-lg font-bold">
-              Quero ser Smart + Funil — 6× R$ 277/mês ou R$ 1.500 à vista
+            <Button variant="default" size="xl" className="bg-white text-primary hover:bg-white/90 text-lg font-bold h-16 flex flex-col items-center justify-center">
+              <span>Quero ser Smart + Funil</span>
+              <span className="text-sm">6× R$ 277/mês ou R$ 1.500 à vista</span>
             </Button>
             <Button variant="whatsappOutline" size="xl" className="border-white text-white hover:bg-white hover:text-primary">
               Demonstração personalizada
