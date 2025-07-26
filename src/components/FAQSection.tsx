@@ -1,8 +1,6 @@
 import { HelpCircle, CheckCircle, Shield, BarChart3 } from "lucide-react";
-
 const FAQSection = () => {
-  return (
-    <section className="bg-muted py-20 px-4">
+  return <section className="bg-muted py-20 px-4">
       <div className="max-w-4xl mx-auto">
         <h2 className="text-3xl md:text-4xl font-bold text-center text-foreground mb-12">
           Perguntas frequentes
@@ -46,17 +44,12 @@ const FAQSection = () => {
                 <h3 className="text-xl font-bold text-foreground mb-2">
                   Existem limites no plano?
                 </h3>
-                <p className="text-muted-foreground">
-                  Plano Smart: até 40 grupos por número, mensagens ilimitadas. 
-                  Diamond e Black escalam ilimitado para grandes operações.
-                </p>
+                <p className="text-muted-foreground">Plano Smart: grupos ilimitados por número, mensagens ilimitadas. </p>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default FAQSection;
