@@ -1,6 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { CreditCard, Calendar } from "lucide-react";
+import { useUTMParams } from "@/hooks/useUTMParams";
 const PricingSection = () => {
+  const { getCheckoutUrlWithUTMs } = useUTMParams();
+  
   return <section className="bg-gradient-primary py-20 px-4 text-white">
       <div className="max-w-4xl mx-auto text-center">
         <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -38,7 +41,7 @@ const PricingSection = () => {
           </div>
           
           <Button variant="default" size="xl" className="w-full bg-white text-primary hover:bg-white/90 text-lg font-bold h-16 flex flex-col items-center justify-center" asChild>
-            <a href="https://checkout.devzapp.com.br/subscribe/smart-webhook-promo" target="_blank" rel="noopener noreferrer">
+            <a href={getCheckoutUrlWithUTMs("https://checkout.devzapp.com.br/subscribe/smart-webhook-promo")} target="_blank" rel="noopener noreferrer">
               <span>Quero ser Smart + Funil</span>
               <span className="text-sm">6× R$ 277/mês ou R$ 1.500 à vista</span>
             </a>
