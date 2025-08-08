@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Zap, Clock } from "lucide-react";
 import { useUTMParams } from "@/hooks/useUTMParams";
+import { trackInitiateCheckout } from "@/utils/facebookPixel";
 
 const CTASection = () => {
   const { getCheckoutUrlWithUTMs } = useUTMParams();
@@ -29,7 +30,12 @@ const CTASection = () => {
               className="bg-white text-primary hover:bg-white/90 text-lg font-bold h-16 flex flex-col items-center justify-center"
               asChild
             >
-              <a href={getCheckoutUrlWithUTMs("https://checkout.devzapp.com.br/subscribe/smart-webhook-promo")} target="_blank" rel="noopener noreferrer">
+              <a 
+                href={getCheckoutUrlWithUTMs("https://checkout.devzapp.com.br/subscribe/smart-webhook-promo")} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                onClick={() => trackInitiateCheckout()}
+              >
                 <span>Quero ser Smart + Funil</span>
                 <span className="text-sm">6× R$ 277/mês ou R$ 1.500 à vista</span>
               </a>
