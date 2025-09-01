@@ -35,301 +35,126 @@
 (function () {
   // ======== CONFIG ========
   var POST_URL = "https://testeutm-463492272412.us-east4.run.app/utmIngest";
-  var API_KEY  = "";                  // se usar x-api-key no backend, preencha
-  var CLICK_POST_TIMEOUT_MS = 700;    // espera máx. antes de navegar
+  var API_KEY  = "";
+  var CLICK_POST_TIMEOUT_MS = 700;
   var CLICK_SELECTOR = 'a, [data-href], [data-url], [gpc-link], button[data-href], button[data-url], .gpc_botao, .link_externo';
-  var APPLY_UTM_TO_ALL_LINKS_ON_DOMREADY = true; // aplica UTM nos links ao carregar o DOM
+  var APPLY_UTM_TO_ALL_LINKS_ON_DOMREADY = true;
+
+  var FORCE_REFERRER_HOSTS = ['checkout.devzapp.com.br'];
+  var LINK_REFERRER_POLICY = 'no-referrer-when-downgrade';
   // ========================
 
-  // ---------- utils ----------
   function log(){ try { console.log.apply(console, arguments); } catch(_){} }
   function warn(){ try { console.warn.apply(console, arguments); } catch(_){} }
-
-  function normSpaces(s) {
-    s = s == null ? '' : String(s);
-    s = s.split('+').join('_');
-    s = s.split('%20').join('_');
-    s = s.split('%2B').join('_');
-    s = s.split('%2b').join('_');
-    return s;
+  function normSpaces(s){ s = s==null?'':String(s); s=s.split('+').join('_'); s=s.split('%20').join('_'); s=s.split('%2B').join('_'); s=s.split('%2b').join('_'); return s; }
+  function parseQueryLiteral(url){ var out={}; try{ if(!url||url.indexOf('?')===-1) return out; url=url.split('#',1)[0]; var q=url.substring(url.indexOf('?')+1).split('&'); for(var i=0;i<q.length;i++){ if(!q[i]) continue; var idx=q[i].indexOf('='); var k=idx===-1?q[i]:q[i].slice(0,idx); var v=idx===-1?'':q[i].slice(idx+1); k=normSpaces(k); v=normSpaces(v); if(Object.prototype.hasOwnProperty.call(out,k)){ if(!Array.isArray(out[k])) out[k]=[out[k]]; out[k].push(v); } else out[k]=v; } }catch(_){ } return out; }
+  function buildQueryLiteral(obj){ var parts=[]; for(var k in obj) if(Object.prototype.hasOwnProperty.call(obj,k)){ var v=obj[k]; if(Array.isArray(v)){ for(var i=0;i<v.length;i++) parts.push(k+'='+v[i]); } else parts.push(k+'='+v); } return parts.join('&'); }
+  function parseExistingQueryLiteral(href){ if(!href||href.indexOf('?')===-1) return {}; var base=href.split('#',1)[0]; return parseQueryLiteral(base); }
+  function mergeParamsIntoUrlLiteral(href, params){
+    if(!href) return href;
+    var hash='',hi=href.indexOf('#'); if(hi!==-1){ hash=href.slice(hi); href=href.slice(0,hi); }
+    var hasQ=href.indexOf('?')!==-1; var base=hasQ?href.split('?',1)[0]:href;
+    var existing=hasQ?parseExistingQueryLiteral(href):{};
+    for(var key in params) if(Object.prototype.hasOwnProperty.call(params,key)) delete existing[key];
+    var merged={}; for(var ek in existing) if(Object.prototype.hasOwnProperty.call(existing,ek)) merged[ek]=existing[ek];
+    for(var nk in params) if(Object.prototype.hasOwnProperty.call(params,nk)) merged[nk]=params[nk];
+    var q=buildQueryLiteral(merged); return (q?(base+'?'+q):base)+hash;
   }
-  function parseQueryLiteral(url) {
-    var out = {};
-    try {
-      if (!url || url.indexOf('?') === -1) return out;
-      url = url.split('#', 1)[0];
-      var query = url.substring(url.indexOf('?') + 1);
-      var pairs = query.split('&');
-      for (var i = 0; i < pairs.length; i++) {
-        if (!pairs[i]) continue;
-        var idx = pairs[i].indexOf('=');
-        var k = idx === -1 ? pairs[i] : pairs[i].slice(0, idx);
-        var v = idx === -1 ? ''       : pairs[i].slice(idx + 1);
-        k = normSpaces(k); v = normSpaces(v);
-        if (Object.prototype.hasOwnProperty.call(out, k)) {
-          if (!Array.isArray(out[k])) out[k] = [out[k]];
-          out[k].push(v);
-        } else {
-          out[k] = v;
-        }
+  function firstOf(v){ return Array.isArray(v)?(v[0]||null):(v||null); }
+  function getSessionId(){ try{ var k='gpc_sid'; var sid=sessionStorage.getItem(k); if(!sid){ sid=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8); sessionStorage.setItem(k,sid);} return sid; }catch(_){ return null; } }
+  function getHrefFromEl(el){ if(!el) return null; if(el.tagName && el.tagName.toLowerCase()==='a'){ return el.href||el.getAttribute('href')||null; } return el.getAttribute('data-href')||el.getAttribute('data-url')||el.getAttribute('gpc-link')||null; }
+  function setHrefOnEl(el,url){ if(!el) return; if(el.tagName && el.tagName.toLowerCase()==='a'){ el.setAttribute('href',url); } else if(el.hasAttribute('data-href')){ el.setAttribute('data-href',url); } else if(el.hasAttribute('data-url')){ el.setAttribute('data-url',url); } else if(el.hasAttribute('gpc-link')){ el.setAttribute('gpc-link',url); } }
+  function isNavigableUrl(u){ if(!u) return false; var s=String(u).trim(); if(!s||s==='#'||s.toLowerCase().indexOf('javascript:')===0) return false; if(s.indexOf('mailto:')===0||s.indexOf('tel:')===0) return false; return true; }
+  function getButtonText(el){ if(!el) return null; var t=(el.innerText||el.textContent||'').trim(); if(!t) t=(el.getAttribute('aria-label')||el.getAttribute('title')||el.value||'').trim(); return t||null; }
+
+  function ensureReferrerPolicy(el, absUrl){
+    try{
+      if(!(el && el.tagName && el.tagName.toLowerCase()==='a')) return;
+      var host=absUrl.hostname;
+      if(FORCE_REFERRER_HOSTS.indexOf(host)!==-1){
+        el.setAttribute('referrerpolicy', LINK_REFERRER_POLICY);
+        var rel=(el.getAttribute('rel')||'').replace(/bnoreferrerb/g,'').replace(/s{2,}/g,' ').trim();
+        if(rel) el.setAttribute('rel', rel); else el.removeAttribute('rel');
       }
-    } catch (_) {}
-    return out;
-  }
-  function buildQueryLiteral(obj) {
-    var parts = [];
-    for (var k in obj) if (Object.prototype.hasOwnProperty.call(obj, k)) {
-      var v = obj[k];
-      if (Array.isArray(v)) {
-        for (var i = 0; i < v.length; i++) parts.push(k + '=' + v[i]);
-      } else {
-        parts.push(k + '=' + v);
-      }
-    }
-    return parts.join('&');
-  }
-  function parseExistingQueryLiteral(href) {
-    if (!href || href.indexOf('?') === -1) return {};
-    var base = href.split('#', 1)[0];
-    return parseQueryLiteral(base);
-  }
-  function mergeParamsIntoUrlLiteral(href, params) {
-    if (!href) return href;
-    var hash = '', hi = href.indexOf('#');
-    if (hi !== -1) { hash = href.slice(hi); href = href.slice(0, hi); }
-    var hasQ = href.indexOf('?') !== -1;
-    var base = hasQ ? href.split('?', 1)[0] : href;
-    var existing = hasQ ? parseExistingQueryLiteral(href) : {};
-    for (var key in params) if (Object.prototype.hasOwnProperty.call(params, key)) delete existing[key];
-    var merged = {};
-    for (var ek in existing) if (Object.prototype.hasOwnProperty.call(existing, ek)) merged[ek] = existing[ek];
-    for (var nk in params) if (Object.prototype.hasOwnProperty.call(params, nk)) merged[nk] = params[nk];
-    var q = buildQueryLiteral(merged);
-    return (q ? (base + '?' + q) : base) + hash;
-  }
-  function firstOf(v){ return Array.isArray(v) ? (v[0] || null) : (v || null); }
-
-  function getSessionId() {
-    try {
-      var k = 'gpc_sid';
-      var sid = sessionStorage.getItem(k);
-      if (!sid) {
-        sid = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8);
-        sessionStorage.setItem(k, sid);
-      }
-      return sid;
-    } catch (_) { return null; }
+    }catch(_){}
   }
 
-  function getHrefFromEl(el) {
-    if (!el) return null;
-    if (el.tagName && el.tagName.toLowerCase() === 'a') {
-      return el.href || el.getAttribute('href') || null;
-    }
-    return el.getAttribute('data-href') || el.getAttribute('data-url') || el.getAttribute('gpc-link') || null;
+  // >>> CORRIGIDO: grava src SEM encode (o URL serializa e codifica 1x)
+  function ensureFallbackParams(urlStr){
+    try{
+      var u=new URL(urlStr, location.href);
+      if(!u.searchParams.has('src')){ u.searchParams.set('src', String(location.href)); }
+      if(!u.searchParams.has('clid')){ var sid=getSessionId(); if(sid) u.searchParams.set('clid', sid); }
+      return u.href;
+    }catch(_){ return urlStr; }
   }
 
-  function setHrefOnEl(el, url) {
-    if (!el) return;
-    if (el.tagName && el.tagName.toLowerCase() === 'a') {
-      el.setAttribute('href', url);
-    } else if (el.hasAttribute('data-href')) {
-      el.setAttribute('data-href', url);
-    } else if (el.hasAttribute('data-url')) {
-      el.setAttribute('data-url', url);
-    } else if (el.hasAttribute('gpc-link')) {
-      el.setAttribute('gpc-link', url);
-    } // se nenhum desses, deixa quieto
-  }
-
-  function isNavigableUrl(u) {
-    if (!u) return false;
-    var s = String(u).trim();
-    if (!s || s === '#' || s.toLowerCase().startsWith('javascript:')) return false;
-    if (s.startsWith('mailto:') || s.startsWith('tel:')) return false;
-    return true;
-  }
-
-  function getButtonText(el) {
-    if (!el) return null;
-    var t = (el.innerText || el.textContent || '').trim();
-    if (!t) t = (el.getAttribute('aria-label') || el.getAttribute('title') || el.value || '').trim();
-    return t || null;
-  }
-
-  function buildPayload(utm, btnText, targetUrl) {
+  function buildPayload(utm, btnText, targetUrl){
+    var fullRef=String(location.href);
+    var browserRef=document.referrer||'';
+    var combinedRef=(browserRef && browserRef!==fullRef)?(fullRef+' || '+browserRef):fullRef;
     return {
-      utm_source:   firstOf(utm.utm_source),
-      utm_medium:   firstOf(utm.utm_medium),
-      utm_campaign: firstOf(utm.utm_campaign),
-      utm_term:     firstOf(utm.utm_term),
-      utm_content:  firstOf(utm.utm_content),
-      gclid:  firstOf(utm.gclid) || firstOf(utm.gclsrc),
-      fbclid: firstOf(utm.fbclid),
-      wbraid: firstOf(utm.wbraid),
-      click_id: firstOf(utm.click_id) || firstOf(utm.clickid) || firstOf(utm.clickId),
-
-      page_url:  String(location.href),
-      referrer:  document.referrer || null,
-      session_id: getSessionId(),
-      user_agent: (navigator && navigator.userAgent) ? navigator.userAgent : null,
-
-      button_text: btnText,
-      click_target: targetUrl
+      utm_source:firstOf(utm.utm_source), utm_medium:firstOf(utm.utm_medium), utm_campaign:firstOf(utm.utm_campaign),
+      utm_term:firstOf(utm.utm_term), utm_content:firstOf(utm.utm_content),
+      gclid:firstOf(utm.gclid)||firstOf(utm.gclsrc), fbclid:firstOf(utm.fbclid), wbraid:firstOf(utm.wbraid),
+      click_id:firstOf(utm.click_id)||firstOf(utm.clickid)||firstOf(utm.clickId),
+      page_url:fullRef, referrer:combinedRef, session_id:getSessionId(),
+      user_agent:(navigator&&navigator.userAgent)?navigator.userAgent:null,
+      button_text:btnText, click_target:targetUrl
     };
   }
 
-  function postPayload(payload, onDone) {
-    try {
-      var headers = { 'Content-Type': 'application/json' };
-      if (API_KEY) headers['x-api-key'] = API_KEY;
-
-      log('[UTM-POST] ->', POST_URL, payload);
-
-      var ac = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-      var timedOut = false;
-      var timer = setTimeout(function(){
-        timedOut = true;
-        try { ac && ac.abort(); } catch(_) {}
-        onDone && onDone('timeout');
-      }, CLICK_POST_TIMEOUT_MS);
-
-      fetch(POST_URL, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(payload),
-        keepalive: true,
-        signal: ac ? ac.signal : undefined,
-        cache: 'no-store',
-        credentials: 'omit',
-        mode: 'cors'
-      }).then(function(resp){
-        if (timedOut) return;
-        clearTimeout(timer);
-        resp.text().then(function(txt){
-          log('[UTM-POST] status:', resp.status, (txt||'').slice(0,300));
-          onDone && onDone(null);
-        }).catch(function(){
-          log('[UTM-POST] status:', resp.status, '(sem corpo)');
-          onDone && onDone(null);
-        });
-      }).catch(function(err){
-        if (timedOut) return;
-        clearTimeout(timer);
-        warn('[UTM-POST] erro:', err && err.message ? err.message : err);
-        if (!API_KEY && navigator && typeof navigator.sendBeacon === 'function') {
-          try {
-            var ok = navigator.sendBeacon(POST_URL, new Blob([JSON.stringify(payload)], { type: 'application/json' }));
-            log('[UTM-POST] sendBeacon fallback:', ok);
-          } catch(_) {}
-        }
-        onDone && onDone('error');
-      });
-    } catch (e) {
-      warn('[UTM-POST] exceção:', e && e.message ? e.message : e);
-      onDone && onDone('error');
-    }
+  function postPayload(payload,onDone){
+    try{
+      var headers={'Content-Type':'application/json'}; if(API_KEY) headers['x-api-key']=API_KEY;
+      var ac=(typeof AbortController!=='undefined')?new AbortController():null; var timedOut=false;
+      var timer=setTimeout(function(){ timedOut=true; try{ac&&ac.abort();}catch(_){} onDone&&onDone('timeout'); }, CLICK_POST_TIMEOUT_MS);
+      fetch(POST_URL,{method:'POST',headers:headers,body:JSON.stringify(payload),keepalive:true,signal:ac?ac.signal:void 0,cache:'no-store',credentials:'omit',mode:'cors'})
+      .then(function(resp){ if(timedOut) return; clearTimeout(timer); return resp.text().catch(function(){return'';}); })
+      .then(function(){ onDone&&onDone(null); })
+      .catch(function(){ if(timedOut) return; clearTimeout(timer); if(!API_KEY && navigator && typeof navigator.sendBeacon==='function'){ try{ navigator.sendBeacon(POST_URL,new Blob([JSON.stringify(payload)],{type:'application/json'})); }catch(_){} } onDone&&onDone('error'); });
+    }catch(e){ onDone&&onDone('error'); }
   }
 
-  function navigate(targetUrl, newTab, el) {
-    try {
-      if (newTab) {
-        var win = window.open(targetUrl, (el && el.getAttribute('target')) || '_blank');
-        if (!win) location.href = targetUrl;
-      } else {
-        location.href = targetUrl;
+  function navigate(targetUrl,newTab,el){ try{ if(newTab){ var win=window.open(targetUrl,(el&&el.getAttribute('target'))||'_blank'); if(!win) location.href=targetUrl; } else { location.href=targetUrl; } }catch(_){ location.href=targetUrl; } }
+
+  function applyToLinks(){
+    try{
+      var utm=parseQueryLiteral(String(location.href)); var hasUtm=!!buildQueryLiteral(utm);
+      var nodes=document.querySelectorAll('a, [gpc-link], [data-href], [data-url], .gpc_botao, .link_externo'); var changed=0;
+      for(var i=0;i<nodes.length;i++){
+        var el=nodes[i]; var url=getHrefFromEl(el); if(!isNavigableUrl(url)) continue;
+        if(hasUtm){ var merged=mergeParamsIntoUrlLiteral(url,utm); if(merged && merged!==url){ setHrefOnEl(el,merged); url=merged; changed++; } }
+        var withFallback=ensureFallbackParams(url); if(withFallback!==url){ setHrefOnEl(el,withFallback); url=withFallback; changed++; }
+        try{ var abs=new URL(url,location.href); ensureReferrerPolicy(el,abs); }catch(_){}
       }
-    } catch (_) {
-      location.href = targetUrl;
-    }
+      log('[UTM] links tratados — alterados:',changed);
+    }catch(e){ warn('[UTM] applyToLinks erro:',e&&e.message?e.message:e); }
   }
 
-  // ---------- aplica UTM nos links do DOM (opcional) ----------
-  function applyUtmsToButtons() {
-    try {
-      var utm = parseQueryLiteral(String(location.href));
-      var utmStr = buildQueryLiteral(utm);
-      if (!utmStr) { log('[UTM] nenhum parâmetro UTM na URL — nada para aplicar'); return; }
-
-      var changed = 0;
-      var nodes = document.querySelectorAll('a, [gpc-link], [data-href], [data-url], .gpc_botao, .link_externo');
-      for (var i = 0; i < nodes.length; i++) {
-        var el = nodes[i];
-        var url = getHrefFromEl(el);
-        if (!isNavigableUrl(url)) continue;
-        var merged = mergeParamsIntoUrlLiteral(url, utm);
-        if (merged && merged !== url) {
-          setHrefOnEl(el, merged);
-          changed++;
-        }
-      }
-      log('[UTM] aplicado nos links — alterados:', changed);
-    } catch (e) {
-      warn('[UTM] applyUtmsToButtons erro:', e && e.message ? e.message : e);
-    }
-  }
-
-  // --------- intercepta cliques ----------
   document.addEventListener('click', function (ev) {
-    var el = ev.target && ev.target.closest ? ev.target.closest(CLICK_SELECTOR) : null;
-    if (!el) return;
+    var el = ev.target && ev.target.closest ? ev.target.closest(CLICK_SELECTOR) : null; if(!el) return;
+    var url = getHrefFromEl(el); if(!isNavigableUrl(url)) return;
+    var isMiddle=(ev.button===1);
+    var newTab=isMiddle||ev.ctrlKey||ev.metaKey||ev.shiftKey||(el.getAttribute&&el.getAttribute('target')==='_blank');
+    var utm=parseQueryLiteral(String(location.href));
+    var mergedUrl=mergeParamsIntoUrlLiteral(url, utm); if(mergedUrl && mergedUrl!==url){ setHrefOnEl(el,mergedUrl); url=mergedUrl; }
+    var finalUrl=ensureFallbackParams(url); if(finalUrl!==url){ setHrefOnEl(el,finalUrl); url=finalUrl; }
+    try{ var abs2=new URL(url,location.href); ensureReferrerPolicy(el,abs2); }catch(_){}
+    var btnText=getButtonText(el); var payload=buildPayload(utm,btnText,url);
+    if(newTab){ postPayload(payload,function(){}); return; }
+    ev.preventDefault(); postPayload(payload,function(){ navigate(url,false,el); });
+  }, { capture:true, passive:false });
 
-    var url = getHrefFromEl(el);
-    if (!isNavigableUrl(url)) return;
+  (function(){ try{ var utm=parseQueryLiteral(String(location.href)); var payload=buildPayload(utm,'(page_load)',null); postPayload(payload,function(){}); }catch(e){} })();
 
-    var isMiddle = (ev.button === 1);
-    var newTab = isMiddle || ev.ctrlKey || ev.metaKey || ev.shiftKey || (el.getAttribute && el.getAttribute('target') === '_blank');
-
-    // UTM da página atual
-    var utm = parseQueryLiteral(String(location.href));
-
-    // Mescla UTM no destino do clique
-    var mergedUrl = mergeParamsIntoUrlLiteral(url, utm);
-    if (mergedUrl && mergedUrl !== url) {
-      setHrefOnEl(el, mergedUrl); // garante que o link a ser aberto tem as UTMs
-      url = mergedUrl;
-    }
-
-    var btnText = getButtonText(el);
-    var payload = buildPayload(utm, btnText, url);
-
-    if (newTab) {
-      // Não bloqueia — só dispara o POST e deixa abrir a nova aba
-      postPayload(payload, function(){ /* noop */ });
-      return;
-    }
-
-    // Mesma aba: segura, posta e navega
-    ev.preventDefault();
-    log('[UTM-CLICK] navegando para:', url);
-
-    postPayload(payload, function(){
-      navigate(url, false, el);
-    });
-  }, { capture: true, passive: false });
-
-  // --- POST também no carregamento da página ---
-  (function postOnPageLoad() {
-    try {
-      var utm = parseQueryLiteral(String(location.href));
-      var payload = buildPayload(utm, '(page_load)', null);
-      postPayload(payload, function () { /* noop */ });
-      log('[UTM-PAGELOAD] POST disparado', payload);
-    } catch (e) {
-      warn('[UTM-PAGELOAD] erro:', e && e.message ? e.message : e);
-    }
-  })();
-
-  // --- aplica UTM em todos os links quando o DOM estiver pronto ---
   if (APPLY_UTM_TO_ALL_LINKS_ON_DOMREADY) {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', applyUtmsToButtons);
-    } else {
-      applyUtmsToButtons();
-    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyToLinks);
+    else applyToLinks();
   }
 })();
 </script>
+
 
 <noscript>
   <img height="1" width="1"
